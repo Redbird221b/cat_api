@@ -44,6 +44,8 @@ class TourBase(BaseModel):
     price: float = Field(..., ge=0, description="Стоимость тура")
     extra_costs: Optional[str] = Field(None, description="Дополнительные расходы")
     accommodation: Optional[str] = Field(None, description="Описание проживания")
+    category: str
+    tags: List[str]
 
 
 class TourCreate(TourBase):

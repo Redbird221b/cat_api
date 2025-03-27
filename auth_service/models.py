@@ -28,6 +28,8 @@ class Tour(Base):
     extra_costs = Column(Text, nullable=True)
     accommodation = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
+    category = Column(String, nullable=False)
+    tags = Column(ARRAY(String), nullable=False)
 
     # Связь с маршрутами
     routes = relationship("Route", back_populates="tour", cascade="all, delete-orphan")
