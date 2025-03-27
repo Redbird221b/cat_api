@@ -21,18 +21,30 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],  # Разрешаем заголовки
 )
 
+
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    print("❌ Ошибка валидации запроса:", json.dumps(exc.errors(), indent=2, ensure_ascii=False))  # Вывод в консоль
+    error_details = []
+    for err in exc.errors():
+        field_path = " → ".join(map(str, err["loc"]))  # Преобразуем список loc в читаемую строку
+        error_message = f"Ошибка в поле '{field_path}': {err['msg']}"
+        error_details.append(error_message)
+
+    # Выводим в консоль в более удобочитаемом формате
+    print("❌ Ошибка валидации запроса:")
+    for error in error_details:
+        print(f"  - {error}")
+
     return JSONResponse(
         status_code=422,
-        content={"detail": jsonable_encoder(exc.errors(), exclude={"input"})}
+        content={"detail": error_details}
     )
+
 
 # Подключаем маршруты
 app.include_router(routes.router)
 
-
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8222)
