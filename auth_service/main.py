@@ -15,7 +15,7 @@ app = FastAPI()
 # Настройки CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Указываем конкретный источник (или несколько)
+    allow_origins=["http://localhost:5173", "77.221.158.99:80"],  # Указываем конкретный источник (или несколько)
     allow_credentials=True,  # Позволяет передавать куки (refresh_token)
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Разрешаем только нужные методы
     allow_headers=["Authorization", "Content-Type"],  # Разрешаем заголовки
