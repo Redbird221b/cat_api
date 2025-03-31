@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import User, Tour, Route, Schedule
+from models import User, Tour, Route, Schedule, Application
 from utils import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from schemas import TourCreate, TourResponse, RouteCreate, RouteResponse, ScheduleCreate, ScheduleResponse
+from schemas import TourCreate, TourResponse, RouteCreate, RouteResponse, ScheduleCreate, ScheduleResponse, ApplicationCreate, ApplicationResponse
 from typing import List
 
 router = APIRouter()
@@ -214,7 +214,7 @@ def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_d
     tour.accommodation_ru = tour_data.accommodation_ru
     tour.accommodation_en = tour_data.accommodation_en
     tour.category = tour_data.category
-    tour.tags = tour_datatags
+    tour.tags = tour_data.tags
     db.commit()
 
     # Удаляем старые маршруты и расписание
@@ -383,3 +383,74 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
     db.delete(schedule)
     db.commit()
     return {"message": "Schedule deleted successfully"}
+
+
+# ========================== ЗАЯВКИ ==========================
+
+@router.post("/applications/", response_model=ApplicationResponse)
+def create_application(application_data: ApplicationCreate, db: Session = Depends(get_db)):
+    # Проверяем, существует ли тур
+    tour = db.query(Tour).filter(Tour.id == application_data.tour_id).first()
+    if not tour:
+        raise HTTPException(status_code=404, detail="Tour not found")
+
+    # Проверяем, существует ли пользователь (если указан user_id)
+    if application_data.user_id:
+        user = db.query(User).filter(User.id == application_data.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    new_application = Application(
+        tour_id=application_data.tour_id,
+        user_id=application_data.user_id,
+        last_name=application_data.last_name,
+        first_name=application_data.first_name,
+        middle_name=application_data.middle_name,
+        gender=application_data.gender,
+        citizenship=application_data.citizenship,
+        date_of_birth=application_data.date_of_birth,
+        passport_number=application_data.passport_number,
+        passport_issue_date=application_data.passport_issue_date,
+        passport_expiry_date=application_data.passport_expiry_date,
+        home_address=application_data.home_address,
+        phone_numbers=application_data.phone_numbers,
+        email=application_data.email,
+        emergency_contact_phones=application_data.emergency_contact_phones,
+        emergency_contact_emails=application_data.emergency_contact_emails,
+        workplace=application_data.workplace,
+        package_type=application_data.package_type,
+        altitude_experience=application_data.altitude_experience,
+        additional_info=application_data.additional_info,
+        additional_services=application_data.additional_services,
+        arrival_airport=application_data.arrival_airport,
+        arrival_date=application_data.arrival_date,
+        arrival_time=application_data.arrival_time,
+        arrival_flight_number=application_data.arrival_flight_number,
+        arrival_osh_to_base_date=application_data.arrival_osh_to_base_date,
+        departure_airport=application_data.departure_airport,
+        departure_date=application_data.departure_date,
+        departure_time=application_data.departure_time,
+        departure_flight_number=application_data.departure_flight_number,
+        departure_osh_to_base_date=application_data.departure_osh_to_base_date,
+        insurance_policy_number=application_data.insurance_policy_number,
+        insurance_coverage=application_data.insurance_coverage,
+        insurance_company_name=application_data.insurance_company_name,
+        insurance_company_phone=application_data.insurance_company_phone,
+        emergency_contact_phone=application_data.emergency_contact_phone
+    )
+
+    db.add(new_application)
+    db.commit()
+    db.refresh(new_application)
+    return new_application
+
+@router.get("/applications/", response_model=List[ApplicationResponse])
+def get_applications(db: Session = Depends(get_db)):
+    return db.query(Application).all()
+
+@router.get("/applications/{application_id}", response_model=ApplicationResponse)
+def get_application(application_id: int, db: Session = Depends(get_db)):
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return application

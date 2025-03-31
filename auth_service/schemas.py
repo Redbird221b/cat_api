@@ -66,3 +66,70 @@ class TourResponse(TourBase):
 
     class Config:
         from_attributes = True
+
+
+# Новые схемы для заявок
+class ApplicationBase(BaseModel):
+    tour_id: int = Field(..., description="ID тура")
+    user_id: Optional[int] = Field(None, description="ID пользователя (если авторизован)")
+
+    # Паспортные данные
+    last_name: str = Field(..., description="Фамилия")
+    first_name: str = Field(..., description="Имя")
+    middle_name: Optional[str] = Field(None, description="Отчество")
+    gender: str = Field(..., description="Пол (male/female)")
+    citizenship: str = Field(..., description="Гражданство")
+    date_of_birth: datetime = Field(..., description="Дата рождения")
+    passport_number: str = Field(..., description="Номер паспорта")
+    passport_issue_date: datetime = Field(..., description="Дата выдачи паспорта")
+    passport_expiry_date: datetime = Field(..., description="Срок действия паспорта")
+
+    # Контактные данные
+    home_address: str = Field(..., description="Домашний адрес (прописка)")
+    phone_numbers: List[str] = Field(..., description="Ваши номера телефонов")
+    email: str = Field(..., description="E-mail")
+    emergency_contact_phones: List[str] = Field(..., description="Телефоны близких родственников")
+    emergency_contact_emails: List[str] = Field(..., description="E-mailы близких родственников")
+    workplace: Optional[str] = Field(None, description="Место работы/должность")
+
+    # Пакет
+    package_type: str = Field(..., description="Тип пакета")
+    altitude_experience: Optional[str] = Field(None, description="Ваш высотный опыт")
+    additional_info: Optional[str] = Field(None, description="Дополнительная информация")
+
+    # Перечень запрашиваемых услуг
+    additional_services: Optional[List[str]] = Field(None, description="Дополнительные услуги")
+
+    # Прибытие
+    arrival_airport: str = Field(..., description="Аэропорт прибытия")
+    arrival_date: datetime = Field(..., description="Дата прибытия")
+    arrival_time: str = Field(..., description="Время прибытия")
+    arrival_flight_number: str = Field(..., description="Номер рейса прибытия")
+    arrival_osh_to_base_date: Optional[datetime] = Field(None, description="Дата переезда Ош-Базовый лагерь")
+
+    # Выбытие
+    departure_airport: str = Field(..., description="Аэропорт выбытия")
+    departure_date: datetime = Field(..., description="Дата выбытия")
+    departure_time: str = Field(..., description="Время выбытия")
+    departure_flight_number: str = Field(..., description="Номер рейса выбытия")
+    departure_osh_to_base_date: Optional[datetime] = Field(None, description="Дата переезда Ош-Базовый лагерь")
+
+    # Информация о страховке
+    insurance_policy_number: Optional[str] = Field(None, description="Номер страхового полиса")
+    insurance_coverage: Optional[float] = Field(None, description="Сумма покрытия")
+    insurance_company_name: Optional[str] = Field(None, description="Название страховой компании")
+    insurance_company_phone: Optional[str] = Field(None, description="Телефон страховой компании")
+    emergency_contact_phone: Optional[str] = Field(None,
+                                                   description="Телефон контактного лица на непредвиденные случаи")
+
+
+class ApplicationCreate(ApplicationBase):
+    pass
+
+
+class ApplicationResponse(ApplicationBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
