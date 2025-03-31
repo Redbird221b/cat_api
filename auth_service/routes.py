@@ -132,7 +132,7 @@ async def logout(response: Response, request: Request, db: Session = Depends(get
 
 # Получение списка пользователей
 @router.get("/users/", response_model=List[UserResponse])
-def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_users(db: Session = Depends(get_db), ):
     users = db.query(User).all()
     return users
 
@@ -140,7 +140,7 @@ def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_cu
 # ========================== ТУРЫ ==========================
 
 @router.post("/tours/", response_model=TourResponse)
-def create_tour(tour_data: TourCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_tour(tour_data: TourCreate, db: Session = Depends(get_db)):
     new_tour = Tour(
         name_ru=tour_data.name_ru,
         name_en=tour_data.name_en,
@@ -202,7 +202,7 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/tours/{tour_id}")
-def delete_tour(tour_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_tour(tour_id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
@@ -214,7 +214,7 @@ def delete_tour(tour_id: int, db: Session = Depends(get_db), current_user: User 
 
 @router.put("/tours/{tour_id}", response_model=TourResponse)
 def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_db),
-                current_user: User = Depends(get_current_user)):
+                ):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
@@ -268,8 +268,7 @@ def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_d
 # ========================== МАРШРУТЫ ==========================
 
 @router.post("/routes/{tour_id}", response_model=RouteResponse)
-def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(get_db),
-                 current_user: User = Depends(get_current_user)):
+def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(get_db)):
     if not db.query(Tour).filter(Tour.id == tour_id).first():
         raise HTTPException(status_code=404, detail="Tour not found")
 
@@ -299,7 +298,7 @@ def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(ge
 
 @router.put("/routes/{route_id}", response_model=RouteResponse)
 def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(get_db),
-                 current_user: User = Depends(get_current_user)):
+                 ):
     route = db.query(Route).filter(Route.id == route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
@@ -326,7 +325,7 @@ def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(g
 
 
 @router.delete("/routes/{route_id}")
-def delete_route(route_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_route(route_id: int, db: Session = Depends(get_db), ):
     route = db.query(Route).filter(Route.id == route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
@@ -345,7 +344,7 @@ def get_routes(tour_id: int, db: Session = Depends(get_db)):
 
 @router.post("/schedules/{route_id}", response_model=ScheduleResponse)
 def create_schedule(route_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    ):
     if not db.query(Route).filter(Route.id == route_id).first():
         raise HTTPException(status_code=404, detail="Route not found")
 
@@ -369,7 +368,7 @@ def get_schedule(route_id: int, db: Session = Depends(get_db)):
 
 @router.put("/schedules/{schedule_id}", response_model=ScheduleResponse)
 def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    ):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -385,7 +384,7 @@ def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session
 
 
 @router.delete("/schedules/{schedule_id}")
-def delete_schedule(schedule_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_schedule(schedule_id: int, db: Session = Depends(get_db), ):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -448,7 +447,7 @@ def get_applications(db: Session = Depends(get_db)):
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationResponse)
-def get_application(application_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_application(application_id: int, db: Session = Depends(get_db), ):
     application = db.query(Application).filter(Application.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
