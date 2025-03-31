@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import User, Tour, Route, Schedule, Application
 from utils import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from schemas import TourCreate, TourResponse, RouteCreate, RouteResponse, ScheduleCreate, ScheduleResponse, \
-    ApplicationCreate, ApplicationResponse
+    ApplicationCreate, ApplicationResponse, UserResponse
 from typing import List
 
 router = APIRouter()
@@ -17,6 +18,24 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Зависимость для проверки токена
+security = HTTPBearer()
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    token = credentials.credentials
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    email = payload.get("sub")
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
 
 
 # Функция для генерации и отправки токенов
@@ -40,8 +59,8 @@ def generate_tokens(response: Response, user: User, db: Session):
 
 # Регистрация (для администраторов)
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register(request: Request, db: Session = Depends(get_db)):
-    body = request.json()
+async def register(request: Request, db: Session = Depends(get_db)):
+    body = await request.json()  # Добавляем await
     email = body.get("email")
     password = body.get("password")
 
@@ -61,8 +80,8 @@ def register(request: Request, db: Session = Depends(get_db)):
 
 # Авторизация (для администраторов)
 @router.post("/login")
-def login(request: Request, response: Response, db: Session = Depends(get_db)):
-    body = request.json()
+async def login(request: Request, response: Response, db: Session = Depends(get_db)):
+    body = await request.json()  # Добавляем await
     email = body.get("email")
     password = body.get("password")
 
@@ -78,7 +97,7 @@ def login(request: Request, response: Response, db: Session = Depends(get_db)):
 
 # Обновление access токена
 @router.post("/refresh")
-def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+async def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token provided")
@@ -98,7 +117,7 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
 
 # Выход (logout)
 @router.post("/logout")
-def logout(response: Response, request: Request, db: Session = Depends(get_db)):
+async def logout(response: Response, request: Request, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
 
     if refresh_token:
@@ -111,10 +130,17 @@ def logout(response: Response, request: Request, db: Session = Depends(get_db)):
     return {"message": "Logged out successfully"}
 
 
+# Получение списка пользователей
+@router.get("/users/", response_model=List[UserResponse])
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    users = db.query(User).all()
+    return users
+
+
 # ========================== ТУРЫ ==========================
 
 @router.post("/tours/", response_model=TourResponse)
-def create_tour(tour_data: TourCreate, db: Session = Depends(get_db)):
+def create_tour(tour_data: TourCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_tour = Tour(
         name_ru=tour_data.name_ru,
         name_en=tour_data.name_en,
@@ -176,7 +202,7 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/tours/{tour_id}")
-def delete_tour(tour_id: int, db: Session = Depends(get_db)):
+def delete_tour(tour_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
@@ -187,7 +213,8 @@ def delete_tour(tour_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/tours/{tour_id}", response_model=TourResponse)
-def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_db)):
+def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
@@ -241,7 +268,8 @@ def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_d
 # ========================== МАРШРУТЫ ==========================
 
 @router.post("/routes/{tour_id}", response_model=RouteResponse)
-def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(get_db)):
+def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)):
     if not db.query(Tour).filter(Tour.id == tour_id).first():
         raise HTTPException(status_code=404, detail="Tour not found")
 
@@ -270,7 +298,8 @@ def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(ge
 
 
 @router.put("/routes/{route_id}", response_model=RouteResponse)
-def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(get_db)):
+def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)):
     route = db.query(Route).filter(Route.id == route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
@@ -297,7 +326,7 @@ def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(g
 
 
 @router.delete("/routes/{route_id}")
-def delete_route(route_id: int, db: Session = Depends(get_db)):
+def delete_route(route_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     route = db.query(Route).filter(Route.id == route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
@@ -315,7 +344,8 @@ def get_routes(tour_id: int, db: Session = Depends(get_db)):
 # ========================== РАСПИСАНИЕ ==========================
 
 @router.post("/schedules/{route_id}", response_model=ScheduleResponse)
-def create_schedule(route_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db)):
+def create_schedule(route_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
     if not db.query(Route).filter(Route.id == route_id).first():
         raise HTTPException(status_code=404, detail="Route not found")
 
@@ -338,7 +368,8 @@ def get_schedule(route_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/schedules/{schedule_id}", response_model=ScheduleResponse)
-def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db)):
+def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -354,7 +385,7 @@ def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session
 
 
 @router.delete("/schedules/{schedule_id}")
-def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
+def delete_schedule(schedule_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -412,12 +443,12 @@ def create_application(application_data: ApplicationCreate, db: Session = Depend
 
 
 @router.get("/applications/", response_model=List[ApplicationResponse])
-def get_applications(db: Session = Depends(get_db)):
+def get_applications(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Application).all()
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationResponse)
-def get_application(application_id: int, db: Session = Depends(get_db)):
+def get_application(application_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     application = db.query(Application).filter(Application.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")

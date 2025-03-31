@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 
 
+# Существующие схемы (оставляем без изменений)
 class ScheduleBase(BaseModel):
     day_number: int = Field(..., ge=1, description="Номер дня маршрута (начинается с 1)")
     activities_ru: Optional[str] = Field(None, description="Описание событий на русском")
@@ -109,6 +110,16 @@ class ApplicationCreate(ApplicationBase):
 
 class ApplicationResponse(ApplicationBase):
     id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Новая схема для пользователей
+class UserResponse(BaseModel):
+    id: int
+    email: str
     created_at: datetime
 
     class Config:
