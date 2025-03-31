@@ -443,7 +443,7 @@ def create_application(application_data: ApplicationCreate, db: Session = Depend
 
 
 @router.get("/applications/", response_model=List[ApplicationResponse])
-def get_applications(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_applications(db: Session = Depends(get_db)):
     return db.query(Application).all()
 
 
