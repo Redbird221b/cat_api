@@ -67,61 +67,39 @@ class Schedule(Base):
 
 class Application(Base):
     __tablename__ = "applications"
-
     id = Column(Integer, primary_key=True, index=True)
-    tour_id = Column(Integer, ForeignKey("tours.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Для авторизованных пользователей
-
-    # Паспортные данные
     last_name = Column(String, nullable=False)
     first_name = Column(String, nullable=False)
     middle_name = Column(String, nullable=True)
-    gender = Column(String, nullable=False)  # Например, "male", "female"
+    gender = Column(String, nullable=False)
     citizenship = Column(String, nullable=False)
     date_of_birth = Column(DateTime, nullable=False)
-    passport_number = Column(String, nullable=False)  # № паспорта
-    passport_issue_date = Column(DateTime, nullable=False)  # Дата выдачи паспорта
-    passport_expiry_date = Column(DateTime, nullable=False)  # Срок действия паспорта
-
-    # Контактные данные
-    home_address = Column(Text, nullable=False)  # Домашний адрес (прописка)
-    phone_numbers = Column(ARRAY(String), nullable=False)  # Ваш номер телефона (список)
+    passport_number = Column(String, nullable=False)
+    passport_issue_date = Column(DateTime, nullable=False)
+    passport_expiry_date = Column(DateTime, nullable=False)
+    home_address = Column(Text, nullable=False)
+    phone_numbers = Column(ARRAY(String), nullable=False)
     email = Column(String, nullable=False)
-    emergency_contact_phones = Column(ARRAY(String), nullable=False)  # Телефоны близких родственников
-    emergency_contact_emails = Column(ARRAY(String), nullable=False)  # E-mailы близких родственников
-    workplace = Column(String, nullable=True)  # Место работы/должность
-
-    # Пакет
-    package_type = Column(String, nullable=False)  # Укажите желаемый пакет
-    altitude_experience = Column(Text, nullable=True)  # Ваш высотный опыт
-    additional_info = Column(Text, nullable=True)  # Доп. информация
-
-    # Перечень запрашиваемых услуг
-    additional_services = Column(ARRAY(String), nullable=True)  # Чекбоксы с услугами
-
-    # Прибытие
+    emergency_contact_phones = Column(ARRAY(String), nullable=False)
+    emergency_contact_emails = Column(ARRAY(String), nullable=False)
+    workplace = Column(String, nullable=True)
+    package_type = Column(String, nullable=False)
+    altitude_experience = Column(Text, nullable=True)
+    additional_info = Column(Text, nullable=True)
+    additional_services = Column(ARRAY(String), nullable=True)
     arrival_airport = Column(String, nullable=False)
     arrival_date = Column(DateTime, nullable=False)
-    arrival_time = Column(String, nullable=False)  # Например, "14:30"
+    arrival_time = Column(String, nullable=False)
     arrival_flight_number = Column(String, nullable=False)
-    arrival_osh_to_base_date = Column(DateTime, nullable=True)  # Переезд Ош-Базовый лагерь (дата)
-
-    # Выбытие
+    arrival_osh_to_base_date = Column(DateTime, nullable=True)
     departure_airport = Column(String, nullable=False)
     departure_date = Column(DateTime, nullable=False)
     departure_time = Column(String, nullable=False)
     departure_flight_number = Column(String, nullable=False)
-    departure_osh_to_base_date = Column(DateTime, nullable=True)  # Переезд Ош-Базовый лагерь (дата)
-
-    # Информация о страховке
-    insurance_policy_number = Column(String, nullable=True)  # № страхового полиса
-    insurance_coverage = Column(Float, nullable=True)  # Сумма покрытия
+    departure_osh_to_base_date = Column(DateTime, nullable=True)
+    insurance_policy_number = Column(String, nullable=True)
+    insurance_coverage = Column(Float, nullable=True)
     insurance_company_name = Column(String, nullable=True)
     insurance_company_phone = Column(String, nullable=True)
-    emergency_contact_phone = Column(String, nullable=True)  # Телефон контактного лица
-
+    emergency_contact_phone = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
-
-    # Связи
-    tour = relationship("Tour")
-    user = relationship("User")

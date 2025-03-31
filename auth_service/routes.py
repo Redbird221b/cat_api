@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import User, Tour, Route, Schedule, Application
 from utils import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from schemas import TourCreate, TourResponse, RouteCreate, RouteResponse, ScheduleCreate, ScheduleResponse, ApplicationCreate, ApplicationResponse
+from schemas import TourCreate, TourResponse, RouteCreate, RouteResponse, ScheduleCreate, ScheduleResponse, \
+    ApplicationCreate, ApplicationResponse
 from typing import List
 
 router = APIRouter()
@@ -37,10 +38,10 @@ def generate_tokens(response: Response, user: User, db: Session):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# Регистрация
+# Регистрация (для администраторов)
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(request: Request, db: Session = Depends(get_db)):
-    body = await request.json()
+def register(request: Request, db: Session = Depends(get_db)):
+    body = request.json()
     email = body.get("email")
     password = body.get("password")
 
@@ -58,10 +59,10 @@ async def register(request: Request, db: Session = Depends(get_db)):
     return {"message": "User created successfully"}
 
 
-# Авторизация
+# Авторизация (для администраторов)
 @router.post("/login")
-async def login(request: Request, response: Response, db: Session = Depends(get_db)):
-    body = await request.json()
+def login(request: Request, response: Response, db: Session = Depends(get_db)):
+    body = request.json()
     email = body.get("email")
     password = body.get("password")
 
@@ -77,7 +78,7 @@ async def login(request: Request, response: Response, db: Session = Depends(get_
 
 # Обновление access токена
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token provided")
@@ -97,7 +98,7 @@ async def refresh_token(request: Request, response: Response, db: Session = Depe
 
 # Выход (logout)
 @router.post("/logout")
-async def logout(response: Response, request: Request, db: Session = Depends(get_db)):
+def logout(response: Response, request: Request, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
 
     if refresh_token:
@@ -112,7 +113,6 @@ async def logout(response: Response, request: Request, db: Session = Depends(get
 
 # ========================== ТУРЫ ==========================
 
-# Создание тура с маршрутами и расписанием
 @router.post("/tours/", response_model=TourResponse)
 def create_tour(tour_data: TourCreate, db: Session = Depends(get_db)):
     new_tour = Tour(
@@ -137,7 +137,6 @@ def create_tour(tour_data: TourCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_tour)
 
-    # Создание маршрутов и расписания
     for route_data in tour_data.routes:
         new_route = Route(
             tour_id=new_tour.id,
@@ -163,14 +162,11 @@ def create_tour(tour_data: TourCreate, db: Session = Depends(get_db)):
     return new_tour
 
 
-# Получение всех туров
 @router.get("/tours/", response_model=List[TourResponse])
 def get_all_tours(db: Session = Depends(get_db)):
-    return db.query
-    placer(Tour).all()
+    return db.query(Tour).all()
 
 
-# Получение тура по ID
 @router.get("/tours/{tour_id}", response_model=TourResponse)
 def get_tour(tour_id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
@@ -179,7 +175,6 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
     return tour
 
 
-# Удаление тура
 @router.delete("/tours/{tour_id}")
 def delete_tour(tour_id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
@@ -191,14 +186,12 @@ def delete_tour(tour_id: int, db: Session = Depends(get_db)):
     return {"message": "Tour deleted successfully"}
 
 
-# Обновление тура
 @router.put("/tours/{tour_id}", response_model=TourResponse)
 def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == tour_id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
 
-    # Обновляем основные данные тура
     tour.name_ru = tour_data.name_ru
     tour.name_en = tour_data.name_en
     tour.countries = tour_data.countries
@@ -217,11 +210,9 @@ def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_d
     tour.tags = tour_data.tags
     db.commit()
 
-    # Удаляем старые маршруты и расписание
     db.query(Route).filter(Route.tour_id == tour_id).delete()
     db.commit()
 
-    # Создаём новые маршруты и расписание
     for route_data in tour_data.routes:
         new_route = Route(
             tour_id=tour.id,
@@ -249,7 +240,6 @@ def update_tour(tour_id: int, tour_data: TourCreate, db: Session = Depends(get_d
 
 # ========================== МАРШРУТЫ ==========================
 
-# Создание маршрута для существующего тура
 @router.post("/routes/{tour_id}", response_model=RouteResponse)
 def create_route(tour_id: int, route_data: RouteCreate, db: Session = Depends(get_db)):
     if not db.query(Tour).filter(Tour.id == tour_id).first():
@@ -285,16 +275,13 @@ def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(g
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
 
-    # Обновляем данные маршрута
     route.cities = route_data.cities
     route.description_ru = route_data.description_ru
     route.description_en = route_data.description_en
     db.commit()
 
-    # Удаляем старое расписание
     db.query(Schedule).filter(Schedule.route_id == route_id).delete()
 
-    # Добавляем новое расписание
     for schedule_data in route_data.schedules:
         new_schedule = Schedule(
             route_id=route_id,
@@ -309,20 +296,17 @@ def update_route(route_id: int, route_data: RouteCreate, db: Session = Depends(g
     return route
 
 
-# Удаление маршрута
 @router.delete("/routes/{route_id}")
 def delete_route(route_id: int, db: Session = Depends(get_db)):
     route = db.query(Route).filter(Route.id == route_id).first()
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
 
-    # Удаляем маршрут вместе с расписанием
     db.delete(route)
     db.commit()
     return {"message": "Route deleted successfully"}
 
 
-# Получение всех маршрутов для конкретного тура
 @router.get("/routes/{tour_id}", response_model=List[RouteResponse])
 def get_routes(tour_id: int, db: Session = Depends(get_db)):
     return db.query(Route).filter(Route.tour_id == tour_id).all()
@@ -330,7 +314,6 @@ def get_routes(tour_id: int, db: Session = Depends(get_db)):
 
 # ========================== РАСПИСАНИЕ ==========================
 
-# Добавление расписания для маршрута
 @router.post("/schedules/{route_id}", response_model=ScheduleResponse)
 def create_schedule(route_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db)):
     if not db.query(Route).filter(Route.id == route_id).first():
@@ -349,20 +332,17 @@ def create_schedule(route_id: int, schedule_data: ScheduleCreate, db: Session = 
     return new_schedule
 
 
-# Получение расписания для маршрута
 @router.get("/schedules/{route_id}", response_model=List[ScheduleResponse])
 def get_schedule(route_id: int, db: Session = Depends(get_db)):
     return db.query(Schedule).filter(Schedule.route_id == route_id).all()
 
 
-# Обновление дня расписания
 @router.put("/schedules/{schedule_id}", response_model=ScheduleResponse)
 def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session = Depends(get_db)):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
-    # Обновляем данные расписания
     schedule.day_number = schedule_data.day_number
     schedule.activities_ru = schedule_data.activities_ru
     schedule.activities_en = schedule_data.activities_en
@@ -373,7 +353,6 @@ def update_schedule(schedule_id: int, schedule_data: ScheduleCreate, db: Session
     return schedule
 
 
-# Удаление дня расписания
 @router.delete("/schedules/{schedule_id}")
 def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
     schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
@@ -389,20 +368,7 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
 
 @router.post("/applications/", response_model=ApplicationResponse)
 def create_application(application_data: ApplicationCreate, db: Session = Depends(get_db)):
-    # Проверяем, существует ли тур
-    tour = db.query(Tour).filter(Tour.id == application_data.tour_id).first()
-    if not tour:
-        raise HTTPException(status_code=404, detail="Tour not found")
-
-    # Проверяем, существует ли пользователь (если указан user_id)
-    if application_data.user_id:
-        user = db.query(User).filter(User.id == application_data.user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
     new_application = Application(
-        tour_id=application_data.tour_id,
-        user_id=application_data.user_id,
         last_name=application_data.last_name,
         first_name=application_data.first_name,
         middle_name=application_data.middle_name,
@@ -444,9 +410,11 @@ def create_application(application_data: ApplicationCreate, db: Session = Depend
     db.refresh(new_application)
     return new_application
 
+
 @router.get("/applications/", response_model=List[ApplicationResponse])
 def get_applications(db: Session = Depends(get_db)):
     return db.query(Application).all()
+
 
 @router.get("/applications/{application_id}", response_model=ApplicationResponse)
 def get_application(application_id: int, db: Session = Depends(get_db)):
