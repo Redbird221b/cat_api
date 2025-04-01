@@ -79,7 +79,7 @@ async def register(request: Request, db: Session = Depends(get_db)):
 
 
 # Авторизация (для администраторов)
-@router.post("/login")
+@router.post("/login_me")
 async def login(request: Request, response: Response, db: Session = Depends(get_db)):
     body = await request.json()  # Добавляем await
     email = body.get("email")
